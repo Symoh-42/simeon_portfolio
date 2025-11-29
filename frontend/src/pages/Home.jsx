@@ -1,7 +1,102 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Briefcase, Code, GraduationCap, Mail, Phone, MapPin, Layers, Settings, Zap, ArrowRight, Menu, X, User, DollarSign } from 'lucide-react';
+import { Briefcase, Code, GraduationCap, Mail, Phone, MapPin, Layers, Settings, Zap, ArrowRight, Menu, X } from 'lucide-react';
 
 // --- Utility Components ---
+
+/**
+ * Custom Tech Cursor Component
+ * Replaces default cursor with a glowing dot and trailing ring
+ */
+const CustomCursor = () => {
+    const cursorDotRef = useRef(null);
+    const cursorOutlineRef = useRef(null);
+    const [isHovering, setIsHovering] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        // Only run on desktop/devices with a mouse
+        if (window.matchMedia("(pointer: coarse)").matches) return;
+
+        setIsVisible(true);
+
+        const moveCursor = (e) => {
+            const { clientX, clientY } = e;
+
+            // Move the dot instantly
+            if (cursorDotRef.current) {
+                cursorDotRef.current.style.transform = `translate3d(${clientX}px, ${clientY}px, 0)`;
+            }
+
+            // Move the outline with a slight delay/animation via CSS
+            if (cursorOutlineRef.current) {
+                // We use animate to create a smooth trailing effect
+                cursorOutlineRef.current.animate({
+                    transform: `translate3d(${clientX}px, ${clientY}px, 0)`
+                }, {
+                    duration: 500,
+                    fill: 'forwards'
+                });
+            }
+        };
+
+        const handleMouseDown = () => setIsHovering(true);
+        const handleMouseUp = () => setIsHovering(false);
+
+        // Detect hover over interactive elements
+        const handleLinkHoverEvents = () => {
+            const handleLinkEnter = () => setIsHovering(true);
+            const handleLinkLeave = () => setIsHovering(false);
+
+            document.querySelectorAll('a, button, input, textarea, .cursor-pointer').forEach(el => {
+                el.addEventListener('mouseenter', handleLinkEnter);
+                el.addEventListener('mouseleave', handleLinkLeave);
+            });
+        };
+
+        window.addEventListener('mousemove', moveCursor);
+        window.addEventListener('mousedown', handleMouseDown);
+        window.addEventListener('mouseup', handleMouseUp);
+
+        // Initial attach
+        handleLinkHoverEvents();
+
+        // Re-attach listeners if DOM changes (simple observer)
+        const observer = new MutationObserver(handleLinkHoverEvents);
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        return () => {
+            window.removeEventListener('mousemove', moveCursor);
+            window.removeEventListener('mousedown', handleMouseDown);
+            window.removeEventListener('mouseup', handleMouseUp);
+            observer.disconnect();
+        };
+    }, []);
+
+    // If on mobile, don't render custom cursor
+    if (typeof window !== 'undefined' && window.matchMedia("(pointer: coarse)").matches) return null;
+
+    return (
+        <>
+            {/* Inner Dot */}
+            <div
+                ref={cursorDotRef}
+                className={`fixed top-0 left-0 w-2 h-2 bg-primary-400 rounded-full z-[9999] pointer-events-none -translate-x-1/2 -translate-y-1/2 mix-blend-difference transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+            />
+
+            {/* Outer Ring */}
+            <div
+                ref={cursorOutlineRef}
+                className={`fixed top-0 left-0 z-[9998] pointer-events-none -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out border border-primary-400 rounded-full flex items-center justify-center mix-blend-screen
+                    ${isVisible ? 'opacity-100' : 'opacity-0'}
+                    ${isHovering ? 'w-12 h-12 bg-primary-400/20 border-transparent' : 'w-8 h-8'}
+                `}
+            >
+                {/* Optional Crosshair effect inside ring */}
+                <div className={`w-1 h-1 bg-white rounded-full transition-all duration-300 ${isHovering ? 'opacity-0' : 'opacity-50'}`}></div>
+            </div>
+        </>
+    );
+};
 
 /**
  * Hook for scroll animations
@@ -20,7 +115,7 @@ const Reveal = ({ children, className = '', delay = 0 }) => {
             },
             {
                 threshold: 0.1,
-                rootMargin: '0px 0px -50px 0px', // Trigger slightly before element is fully in view
+                rootMargin: '0px 0px -50px 0px',
             }
         );
 
@@ -57,7 +152,7 @@ const Reveal = ({ children, className = '', delay = 0 }) => {
 const AnimatedCard = ({ children, className = '' }) => {
     return (
         <div
-            className={`bg-white/5 border border-white/10 backdrop-blur-sm p-6 sm:p-8 rounded-xl shadow-2xl transition-all duration-500 hover:border-primary-400/50 hover:-translate-y-2 hover:shadow-primary-lg ${className}`}
+            className={`cursor-pointer bg-white/5 border border-white/10 backdrop-blur-sm p-6 sm:p-8 rounded-xl shadow-2xl transition-all duration-500 hover:border-primary-400/50 hover:-translate-y-2 hover:shadow-primary-lg ${className}`}
         >
             {children}
         </div>
@@ -180,7 +275,7 @@ const Navbar = () => {
                             <button
                                 key={item.id}
                                 onClick={() => scrollToSection(item.id)}
-                                className="text-gray-300 hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 group relative"
+                                className="text-gray-300 hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 group relative cursor-none-target"
                                 style={{ animationDelay: `${index * 100}ms` }}
                             >
                                 {item.label}
@@ -220,7 +315,7 @@ const Navbar = () => {
 };
 
 const HeroSection = () => (
-    <section id="hero" className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-gray-900">
+    <section id="hero" className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-gray-900 cursor-default">
         {/* Background Gradient Effect */}
         <div className="absolute inset-0 z-0 opacity-10">
             <div className="absolute top-0 left-0 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
@@ -297,7 +392,7 @@ const AboutSection = () => (
                 {/* Right Column: Stylized Image/Code Placeholder */}
                 <Reveal delay={200}>
                     <AnimatedCard className="aspect-video w-full flex items-center justify-center bg-gray-900 shadow-3xl hover:rotate-1">
-                        <div className="p-6 bg-gray-700 rounded-lg w-full max-w-md shadow-inner">
+                        <div className="p-6 bg-gray-700 rounded-lg w-full max-w-md shadow-inner cursor-text">
                             <div className="flex space-x-2 mb-4">
                                 <div className="w-3 h-3 bg-red-500 rounded-full hover:bg-red-400 transition-colors"></div>
                                 <div className="w-3 h-3 bg-yellow-500 rounded-full hover:bg-yellow-400 transition-colors"></div>
@@ -632,6 +727,13 @@ const App = () => {
       .bg-secondary-500 { background-color: #f97316; } 
       .bg-accent-500 { background-color: #10b981; } 
       .text-primary-400 { color: #60a5fa; } 
+      
+      /* HIDE DEFAULT CURSOR ON DESKTOP */
+      @media (pointer: fine) {
+          body, a, button, input, textarea {
+              cursor: none !important;
+          }
+      }
     `;
         document.head.appendChild(style);
 
@@ -644,6 +746,7 @@ const App = () => {
     return (
         <div className="min-h-screen bg-gray-900 font-sans selection:bg-primary-400 selection:text-gray-900">
             <script src="https://cdn.tailwindcss.com"></script>
+            <CustomCursor />
             <Navbar />
             <main>
                 <HeroSection />
